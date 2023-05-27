@@ -11,6 +11,6 @@ npm run dev
 ```
 ### error
 ```
-添加参数规格时可能会出现 ResizeObserver loop limit exceeded 报错情况
+添加参数规格时可能会出现 ResizeObserver loop limit exceeded 报错情况 刷新一下页面在填一次
 我也没有找到解决方案 如果有解决方案朋友可以发出提问
 ```
