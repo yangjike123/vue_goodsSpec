@@ -42,17 +42,17 @@
 				</div>
 			</div>
 		</div>
-		<el-table :data="tableSkuList" border>
+		<el-table :data="submitList" border>
 			<el-table-column v-for="(item, index) in specData.specList" :label="item.label" :key="index">
-				<template #default="props">
-					<span>{{ props.row[props.column.label] }}</span>
+				<template #default="{ row, column }">
+					<span>{{ row[column.label] }}</span>
 				</template>
 			</el-table-column>
 			<el-table-column v-for="(item, index) in tableHader" :label="item.label" :key="index">
-				<template #default="props">
-					<el-input-number v-if="item.label === '价格'" v-model="submitList[props.$index][item.key]" :precision="2"
+				<template #default="{ $index }">
+					<el-input-number v-if="item.label === '价格'" v-model="submitList[$index][item.key]" :precision="2"
 						size="small" />
-					<el-input-number v-else v-model="submitList[props.$index][item.key]" size="small" />
+					<el-input-number v-else v-model="submitList[$index][item.key]" size="small" />
 				</template>
 			</el-table-column>
 
@@ -62,15 +62,17 @@
 
 <script setup>
 import { ElMessage } from 'element-plus';
-import { ref, reactive, nextTick, watch } from 'vue';
+import { ref, reactive, nextTick, watch, getCurrentInstance } from 'vue';
 // ------------变量----------------
+const instance = getCurrentInstance();
 const specName = ref(''),//规格名
 	inputTags = ref(''), // 规格值
 	inputVisible = ref(false),
 	inputIndex = ref(0),
-	tableSkuList = ref([]), // table显示数量和显示值
+	// tableSkuList = ref([]), // table显示数量和显示值
 	submitList = ref([]),
 	specData = reactive({ specList: [], skuValue: {} });
+
 const InputRef = ref(null);
 const InpuSpecRef = ref(null);
 const tableHader = [
@@ -80,9 +82,8 @@ const tableHader = [
 // ------------变量----------------
 
 // ------------生命周期----------------
-// watch(submitList, (newValue) => {
-// 	console.log('newValue: ', newValue);
-// }, { deep: true });
+watch(submitList, (newValue) => {
+}, { deep: true });
 // ------------生命周期----------------
 
 // -----------function-----------------
@@ -100,7 +101,7 @@ function handleInputConfirm(index, label) {
 		specData.specList[index].tags.push(inputTags.value);
 		if (!specData.skuValue[label]) specData.skuValue[label] = [inputTags.value];
 		else specData.skuValue[label].push(inputTags.value);
-		tableSKU(specData.skuValue);
+		tableSKU();
 	}
 	inputTags.value = '';
 	inputVisible.value = !inputVisible.value;
@@ -115,63 +116,61 @@ function onClilkInput(index) {
 function onDeletSpec(index) { //删除规格
 	delete specData.skuValue[specData.specList[index].label]; //找到相对于的名称，然后删除skuValue相对于的值
 	specData.specList.splice(index, 1); // 同时删除展示的标签
-	tableSKU(specData.skuValue); //触发tableSKU方法 重绘数据和页面
+	tableSKU(); //触发tableSKU方法 重绘数据和页面
 }
 function onDeletSpecValue(index, tagIndex) {//删除规格值
 	specData.skuValue[specData.specList[index].label].splice(tagIndex, 1);//删除tags里面的其中一个值
 	specData.specList[index].tags.splice(tagIndex, 1); // 规格值
-	tableSKU(specData.skuValue);//重绘数据和页面
+	tableSKU();//重绘数据和页面
 }
-function tableSKU(skuObj) {
+function tableSKU() {
 	let temp = [];
-	for (const key in skuObj) {
-		const items = skuObj[key];
-		if (!temp.length) temp.push(...items.map(t => ({ [key]: t })));
-		else {
-			const i2 = [];
-			temp.forEach(obj => {
-				if (items.length === 0) i2.push(obj);
-				else i2.push(...items.map(t => ({ ...obj, [key]: t })))
-			});
-			temp = i2;
-		}
-	}
-	tableSkuList.value = temp;
-	const tableHader = Object.keys(skuObj),
-		specItems = [];
-	for (let index = 0; index < temp.length; index++) {
-		const el = temp[index];
-		let count = 0, skuObj = {};
-		for (let i = 0; i < tableHader.length; i++) {
-			const hader = tableHader[i];
-			if (hader) {
-				count += 1;
-				//防止输入的价格和库存数量丢失
-				const oldSpec = submitList.value[index];
-				if (oldSpec) {
-					skuObj = {
-						...skuObj,
-						[`skuNmae${count}`]: hader,
-						[`skuValue${count}`]: el[hader],
-						price: oldSpec.price || 0,
-						stock: oldSpec.stock || 0
+	specData.specList.forEach((item, index) => {
+		if (!temp.length) {
+			temp.push(
+				...item.tags.map((t, k) => {
+					const oldValue = submitList.value.find(v => v.sku === t);
+					if (oldValue) {
+						return { ...oldValue };
+					} else {
+						return {
+							[`skuName${index + 1}`]: item.label,
+							[`skuValue${index + 1}`]: t,
+							[item.label]: t,
+							price: 0,
+							stock: 0,
+							sku: t,
+						}
 					}
-				} else {
-					//如果没有就是正常的给普通的值
-					skuObj = {
-						...skuObj,
-						[`skuName${count}`]: hader,
-						[`skuValue${count}`]: el[hader],
-						price: 0,
-						stock: 0
+
+				})
+			);
+		} else {
+			const array = [];
+			temp.forEach((obj, objKey) => {
+				if (item.tags.length === 0) array.push(obj);
+				array.push(...item.tags.map((t,i) => {
+					if (obj.sku) obj.sku = obj.sku + t//唯一值
+					const oldValue = submitList.value.find(item => item.sku === obj.sku);
+					if (oldValue) return { ...oldValue }; // 必须展开否则会变成 proxy对象
+					else {
+						return {
+							...obj,
+							[`skuName${index + 1}`]: item.label,
+							[`skuValue${index + 1}`]: t,
+							[item.label]: t,
+							price: 0,
+							stock: 0,
+						}
 					}
-				}
-			}
+				}))
+			})
+			temp = array;
 		}
-		specItems.push(skuObj);
-	}
-	submitList.value = specItems; // 提交数据
-	return temp;
+	})
+	console.log('temp: ', temp);
+	// tableSkuList.value = temp;
+	submitList.value = temp;
 }
 // -----------function-----------------
 
