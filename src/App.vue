@@ -62,9 +62,8 @@
 
 <script setup>
 import { ElMessage } from 'element-plus';
-import { ref, reactive, nextTick, watch, getCurrentInstance } from 'vue';
+import { ref, reactive, nextTick, watch } from 'vue';
 // ------------变量----------------
-const instance = getCurrentInstance();
 const specName = ref(''),//规格名
 	inputTags = ref(''), // 规格值
 	inputVisible = ref(false),
@@ -124,53 +123,45 @@ function onDeletSpecValue(index, tagIndex) {//删除规格值
 	tableSKU();//重绘数据和页面
 }
 function tableSKU() {
-	let temp = [];
-	specData.specList.forEach((item, index) => {
-		if (!temp.length) {
-			temp.push(
-				...item.tags.map((t, k) => {
-					const oldValue = submitList.value.find(v => v.sku === t);
-					if (oldValue) {
-						return { ...oldValue };
-					} else {
-						return {
-							[`skuName${index + 1}`]: item.label,
-							[`skuValue${index + 1}`]: t,
-							[item.label]: t,
-							price: 0,
-							stock: 0,
-							sku: t,
-						}
-					}
+	const list = specData.specList.reduce((def, item, index) => {
+		const data = [];
+		def.forEach(t => {
+			item.tags.forEach(tag => {
+				if (t.sku) t.sku += `,${tag}`;
+				else t.sku = tag;
+				const oldValue = submitList.value.find(o => o.sku === t.sku);
+				if (oldValue) data.push({ ...oldValue });
+				else {
+					data.push({
+						...t,
+						[`skuName${index + 1}`]: item.label,
+						[`skuValue${index + 1}`]: tag,
+						[item.label]: tag,
+						price: 0,
+						stock: 0,
+					})
+				}
 
-				})
-			);
-		} else {
-			const array = [];
-			temp.forEach((obj, objKey) => {
-				if (item.tags.length === 0) array.push(obj);
-				array.push(...item.tags.map((t,i) => {
-					if (obj.sku) obj.sku = obj.sku + t//唯一值
-					const oldValue = submitList.value.find(item => item.sku === obj.sku);
-					if (oldValue) return { ...oldValue }; // 必须展开否则会变成 proxy对象
-					else {
-						return {
-							...obj,
-							[`skuName${index + 1}`]: item.label,
-							[`skuValue${index + 1}`]: t,
-							[item.label]: t,
-							price: 0,
-							stock: 0,
-						}
-					}
-				}))
 			})
-			temp = array;
+		});
+		return data;
+	}, [[]]);
+	const tableList = disposeSku(list);
+	// console.log('tableList: ', tableList);
+	submitList.value = tableList;
+}
+function disposeSku(list) {
+	const result = [];
+	for (let index = 0; index < list.length; index++) {
+		const item = list[index];
+		const sku = [];
+		for (const key in item) {
+			if (key.indexOf('skuValue') >= 0) sku.push(item[key])
 		}
-	})
-	console.log('temp: ', temp);
-	// tableSkuList.value = temp;
-	submitList.value = temp;
+		item.sku = sku.join(',');
+		result.push(item);
+	}
+	return result;
 }
 // -----------function-----------------
 
