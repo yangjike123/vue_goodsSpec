@@ -29,8 +29,9 @@
 					</div>
 					<div style="display: flex;">
 						<div v-for="(tagNmae, tagIndex) in item.tags" :key="tagIndex">
-							<el-tag @close="onDeletSpecValue(index, tagIndex)" closable style="margin: 0 10px;">{{ tagNmae
-							}}</el-tag>
+							<el-tag @close="onDeletSpecValue(index, tagIndex)" closable style="margin: 0 10px;">{{
+						tagNmae
+					}}</el-tag>
 						</div>
 						<div>
 							<el-input v-if="inputIndex === index && inputVisible" size="small" ref="InputRef"
@@ -70,7 +71,7 @@ const specName = ref(''),//规格名
 	inputIndex = ref(0),
 	// tableSkuList = ref([]), // table显示数量和显示值
 	submitList = ref([]),
-	specData = reactive({ specList: [], skuValue: {} });
+	specData = reactive({ specList: [] });
 
 const InputRef = ref(null);
 const InpuSpecRef = ref(null);
@@ -88,18 +89,20 @@ watch(submitList, (newValue) => {
 // -----------function-----------------
 function addSpecName() {
 	if (specName.value) {
-		specData.specList.push({ label: specName.value, tags: [] });
-		specName.value = '';
+		const isExist = specData.specList.find(item => item.label === specName.value);
+		if (!isExist) ElMessage.warning(`"${specName.value}"规格名已存在`);
+		else {
+			specData.specList.push({ label: specName.value, tags: [] });
+			specName.value = '';
+		}
 	} else {
-		ElMessage.warning('请输入规格名称')
+		ElMessage.warning('请输入规格名称');
 	}
 }
-function handleInputConfirm(index, label) {
+function handleInputConfirm(index) {
 	if (inputTags.value) {
 		//找到并吧输入值push到tags里面
 		specData.specList[index].tags.push(inputTags.value);
-		if (!specData.skuValue[label]) specData.skuValue[label] = [inputTags.value];
-		else specData.skuValue[label].push(inputTags.value);
 		tableSKU();
 	}
 	inputTags.value = '';
@@ -113,12 +116,10 @@ function onClilkInput(index) {
 	});
 }
 function onDeletSpec(index) { //删除规格
-	delete specData.skuValue[specData.specList[index].label]; //找到相对于的名称，然后删除skuValue相对于的值
 	specData.specList.splice(index, 1); // 同时删除展示的标签
 	tableSKU(); //触发tableSKU方法 重绘数据和页面
 }
 function onDeletSpecValue(index, tagIndex) {//删除规格值
-	specData.skuValue[specData.specList[index].label].splice(tagIndex, 1);//删除tags里面的其中一个值
 	specData.specList[index].tags.splice(tagIndex, 1); // 规格值
 	tableSKU();//重绘数据和页面
 }
