@@ -88,15 +88,12 @@ watch(submitList, (newValue) => {
 
 // -----------function-----------------
 function addSpecName() {
-	if (specName.value) {
-		const isExist = specData.specList.find(item => item.label === specName.value);
-		if (!isExist) ElMessage.warning(`"${specName.value}"规格名已存在`);
-		else {
-			specData.specList.push({ label: specName.value, tags: [] });
-			specName.value = '';
-		}
-	} else {
-		ElMessage.warning('请输入规格名称');
+	if (!specName.value) return ElMessage.warning('请输入规格名称');
+	const isExist = specData.specList.find(item => item.label === specName.value);
+	if (isExist) ElMessage.warning(`"${specName.value}"规格名已存在`);
+	else {
+		specData.specList.push({ label: specName.value, tags: [] });
+		specName.value = '';
 	}
 }
 function handleInputConfirm(index) {
